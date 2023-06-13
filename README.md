@@ -1,0 +1,1 @@
+credits for the word2vec file : https://fauconnier.github.io/#data
