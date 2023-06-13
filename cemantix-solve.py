@@ -35,22 +35,18 @@ def next_words(highest_words: list, highest_score: int, model: KeyedVectors, idx
                 break
         if found_one:
             return [new_words[i][0], idx_next_word_in_file]
-        if closest_dist > 700:
+        if closest_dist > 700 or idx_next_word_in_file == len(words_file):
             return next_words(highest_words, highest_score, model, idx_next_word_in_file, words_file, words,
                               closest_dist, topn=int(topn * 1.5))
-
-    if idx_next_word_in_file == len(words_file):
-        print("[ERROR] Ran out of imagination ...")
-        quit()
     word = words_file[idx_next_word_in_file]
     idx_next_word_in_file += 1
     return [word, idx_next_word_in_file]
 
 
 def setup_driver():
-    opt = webdriver.FirefoxOptions()
-    opt.add_argument('-headless')
-    driver = webdriver.Firefox(options=opt)
+    #opt = webdriver.FirefoxOptions()
+    #opt.add_argument('-headless')
+    driver = webdriver.Firefox()
     driver.get('https://cemantix.certitudes.org')
     driver.find_element('id', 'dialog-close').click()
     return driver
