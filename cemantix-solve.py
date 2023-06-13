@@ -1,8 +1,8 @@
 from selenium import webdriver
 from gensim.models import KeyedVectors
-import matplotlib.pyplot as plt
+import sys
 import time, math
-
+from bot_reddit import send_message_to_reddit, test_reddit_creds
 
 def compute_highest_words(words: list[str], highest_score: float, threshold: float) -> list[str]:
     print("[LOG] Computing best words...")
@@ -43,17 +43,20 @@ def next_words(highest_words: list, highest_score: int, model: KeyedVectors, idx
     return [word, idx_next_word_in_file]
 
 
-def setup_driver():
-    #opt = webdriver.FirefoxOptions()
-    #opt.add_argument('-headless')
-    driver = webdriver.Firefox()
+def setup_driver(no_ui):
+    if no_ui:
+        opt = webdriver.FirefoxOptions()
+        opt.add_argument('-headless')
+        driver = webdriver.Firefox(options=opt)
+    else:
+        driver = webdriver.Firefox()
     driver.get('https://cemantix.certitudes.org')
     driver.find_element('id', 'dialog-close').click()
     return driver
 
 
-def main(model: KeyedVectors, threshold: float = 0.06):
-    driver = setup_driver()
+def main(model: KeyedVectors, no_ui: bool, threshold: float = 0.06):
+    driver = setup_driver(no_ui)
     a = driver.find_element('id', 'cemantix-guess')
     highest_score = -10000
     closest_distance = -1
@@ -72,9 +75,6 @@ def main(model: KeyedVectors, threshold: float = 0.06):
         a.send_keys(webdriver.Keys.ENTER)
         print("[LOG] Trying a new word : ", word)
         time.sleep(0.3)
-        #while driver.find_element('id', 'cemantix-error').text == "" and \
-        #        driver.find_element("id","cemantix-guessed").text == last_guess.text:
-        #    time.sleep(0.1)
         if driver.find_element('id', 'cemantix-error').text != "" :
             print(f"[WARNING] Word not found")
             continue
@@ -106,22 +106,33 @@ def main(model: KeyedVectors, threshold: float = 0.06):
     time.sleep(1)
     all_words = [element.split(" ")[1] if element.split(" ")[0].isdigit() else element.split(" ")[0] for element in
                  driver.find_element('id', 'cemantix-guesses').text.split("\n")]
-    print(all_words)
     driver.quit()
-    return number_guesses
+    return all_words
+
 
 if __name__ == '__main__':
-    vector_model = KeyedVectors.load_word2vec_format("frWac_no_postag_no_phrase_700_skip_cut50.bin", binary=True,
-                                              unicode_errors="ignore")
-    """tests = [0.075,0.1,0.125,0.15,0.175,0.2,0.225,0.25]
-    tests2 = [0.06,0.065,0.07,0.075,0.08,0.085,0.09,0.095,0.1]
-    tests3 = [0.04,0.045,0.05,0.055,0.06]
-    results = []
-    for i in tests3:
-        results.append(main(vector_model, i))
-    print(results)
-    plt.plot(tests3,results)
-    plt.ylabel("Nombre de coups")
-    plt.xlabel("Tolérance de détection")
-    plt.show()"""
-    main(model=vector_model)
+    possible_args = ["--help","--reddit", "--no-ui","--vector-file"]
+    arguments = sys.argv[1:]
+    if possible_args[0] in arguments:
+        print(
+            """HELP : This script lets you automatically find the word of the day from the game cémantix : https://cemantix.certitudes.org              
+ARGUMENTS :
+--help : shows you this page
+--reddit : Sends some hints to the daily reddit page (please do not spam it!)
+--no-ui : Launches the browser without graphical interface
+--vector-file : Select the name of the pretrained word2vec file you want to use (default is frWac_no_postag_no_phrase_700_skip_cut50.bin)""")
+        quit()
+    if possible_args[3] in arguments:
+        idx = arguments.index(possible_args[3])
+        if idx == len(arguments):
+            print("ERROR : You need to give the name of the word2vec file if you want to use another one than the default")
+            quit()
+        filename = arguments[idx+1]
+    else:
+        filename = "frWac_no_postag_no_phrase_700_skip_cut50.bin"
+    vector_model = KeyedVectors.load_word2vec_format(filename, binary=True, unicode_errors="ignore")
+    if possible_args[1] in arguments:
+        test_reddit_creds()
+    words = main(model=vector_model, no_ui=possible_args[2] in arguments)
+    if possible_args[1] in arguments:
+        send_message_to_reddit(words)

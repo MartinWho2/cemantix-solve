@@ -1,0 +1,4 @@
+praw
+dotenv
+selenium
+gensim
