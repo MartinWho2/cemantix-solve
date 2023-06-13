@@ -1,4 +1,4 @@
 praw
-dotenv
+python-dotenv
 selenium
 gensim

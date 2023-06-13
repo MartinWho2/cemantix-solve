@@ -3,14 +3,14 @@ import dotenv
 import random
 
 def test_reddit_creds():
-    env_vars = dotenv.main.dotenv_values(".env")
+    env_vars = dotenv.main.dotenv_values(".env",)
     if env_vars.get("CLIENT_ID") is None or env_vars.get("SECRET") is None or env_vars.get("PASSWORD") is None or env_vars.get(
             "USERNAME") is None:
         print(
             "ERROR : You are attempting to use the reddit bot functionnality without having configured the .env file first.")
         print("        If you didn't create an account for the bot, please follow the instructions here :"
               "https://medium.com/geekculture/creating-a-reddit-bot-with-python-and-praw-185387248a22")
-        print("        If you already have one, just create a `vars.env` file and put your account data in it.")
+        print("        If you already have one, just create a `.env` file and put your account data in it.")
         quit()
 def send_message_to_reddit(best_words: list[str]):
     env_vars = dotenv.main.dotenv_values(".env")
