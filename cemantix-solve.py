@@ -1,3 +1,4 @@
+import numpy.lib.mixins
 from selenium import webdriver
 from gensim.models import KeyedVectors
 import sys
@@ -53,7 +54,13 @@ def next_words(highest_words: dict[float, str], highest_score: int, model: Keyed
                words_file: list[str], tested_words: list[str], closest_dist: int, last_random_vector: numpy.ndarray,
                submitted_words:list[str] ,topn: int = 20) -> [str, int]:
     if highest_score > 10:
-        new_words = model.most_similar(positive=highest_words, topn=topn)
+        kvs = [(k, v) for k, v in highest_words.items()]
+        if closest_dist < 965 and highest_score > 20:
+            vectors = [model.get_vector(i[1]) for i in kvs]
+            vector_to_test = compute_weighted_mean(vectors, [kv[0] for kv in kvs])
+            new_words = model.most_similar(positive=vector_to_test, topn=topn)
+        else:
+            new_words = model.most_similar(positive=[i[1] for i in kvs], topn=topn)
         i = 0
         found_one = True
         while new_words[i][0] in tested_words:
@@ -118,7 +125,7 @@ def main(model: KeyedVectors, no_ui: bool, threshold: float = 0.06):
         if driver.find_element('id', 'cemantix-error').text != "":
             print(f"[WARNING] Word not found")
             continue
-
+        submitted_words.append(word)
         last_guess = driver.find_element('id', "cemantix-guessed")
         table = driver.find_element('id', "cemantix-guesses")
         splitted = last_guess.text.split(" ")

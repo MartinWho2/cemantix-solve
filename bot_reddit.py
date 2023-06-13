@@ -3,7 +3,7 @@ import dotenv
 import random
 
 def test_reddit_creds():
-    env_vars = dotenv.get_variables("vars.env")
+    env_vars = dotenv.main.dotenv_values(".env")
     if env_vars.get("CLIENT_ID") is None or env_vars.get("SECRET") is None or env_vars.get("PASSWORD") is None or env_vars.get(
             "USERNAME") is None:
         print(
@@ -13,7 +13,7 @@ def test_reddit_creds():
         print("        If you already have one, just create a `vars.env` file and put your account data in it.")
         quit()
 def send_message_to_reddit(best_words: list[str]):
-    env_vars = dotenv.get_variables("vars.env")
+    env_vars = dotenv.main.dotenv_values(".env")
     reddit = praw.Reddit(
         client_id=env_vars["CLIENT_ID"],
         client_secret=env_vars["SECRET"],
