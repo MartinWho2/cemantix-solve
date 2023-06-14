@@ -21,6 +21,8 @@ ARGUMENTS :
 
 `--no-ui : Launches the browser without graphical interface`
 
+`--cemantle : Uses cemantle instead of cemantix (be careful to use an english word2vec file)`
+
 `--vector-file : Select the name of the pretrained word2vec file you want to use (default is frWac_no_postag_no_phrase_700_skip_cut50.bin)`
 
 Credits for the word2vec file : https://fauconnier.github.io/#data
