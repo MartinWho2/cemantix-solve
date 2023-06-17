@@ -2,3 +2,4 @@ praw
 python-dotenv
 selenium
 gensim
+numpy

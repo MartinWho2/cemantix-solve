@@ -1,6 +1,6 @@
 # Cémantix-solver
 This repository was created to make an automatic solver for cémantix. 
-It now also include the code of the reddit bot that gives some hints for the people. 
+It now also includes the code of a reddit bot that gives some hints to the players. 
 
 ## Quick installation
 Go to https://fauconnier.github.io/#data and download a word2vec file of your choice. 
@@ -24,5 +24,8 @@ ARGUMENTS :
 `--cemantle : Uses cemantle instead of cemantix (be careful to use an english word2vec file)`
 
 `--vector-file : Select the name of the pretrained word2vec file you want to use (default is frWac_no_postag_no_phrase_700_skip_cut50.bin)`
+
+`--browser : Chooses the browser to use (default is firefox) (possibilities : firefox, chrome, edge, safari)`
+
 
 Credits for the word2vec file : https://fauconnier.github.io/#data

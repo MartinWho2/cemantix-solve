@@ -1,4 +1,3 @@
-import numpy.lib.mixins
 from selenium import webdriver
 from gensim.models import KeyedVectors
 import sys
@@ -25,8 +24,8 @@ def compute_highest_words(all_words: list[str], highest_score: float, threshold:
     return highests_dict
 
 
-def compute_weighted_mean(vectors: list[numpy.ndarray], scores: list[float]) -> numpy.ndarray:
-    vector = numpy.zeros(vectors[0].shape)
+def compute_weighted_mean(vectors: list[np.ndarray], scores: list[float]) -> np.ndarray:
+    vector = np.zeros(vectors[0].shape)
     s = sum([a for a in scores])
     weights = [score / s for score in scores]
     for i, v in enumerate(vectors):
@@ -53,7 +52,7 @@ def new_random_word(last_vector: np.ndarray, all_words: str, model: KeyedVectors
 
 
 def next_words(highest_words: dict[float, str], highest_score: int, model: KeyedVectors, idx_next_word_in_file: int,
-               words_file: list[str], tested_words: list[str], closest_dist: int, last_random_vector: numpy.ndarray,
+               words_file: list[str], tested_words: list[str], closest_dist: int, last_random_vector: np.ndarray,
                submitted_words: list[str], topn: int = 20) -> [str, int]:
     if highest_score > 15:
         kvs = [(k, v) for k, v in highest_words.items()]
@@ -75,9 +74,9 @@ def next_words(highest_words: dict[float, str], highest_score: int, model: Keyed
         if closest_dist > 700 or idx_next_word_in_file == len(words_file):
             return next_words(highest_words, highest_score, model, idx_next_word_in_file, words_file, tested_words,
                               closest_dist, last_random_vector, submitted_words, topn=int(topn * 1.5))
-    # word = words_file[idx_next_word_in_file]
-    # idx_next_word_in_file += 1
-    # return [word, idx_next_word_in_file]
+    word = words_file[idx_next_word_in_file]
+    idx_next_word_in_file += 1
+    return [word, idx_next_word_in_file]
     if len(submitted_words) > 2:
         mean_word = model.most_similar(model.get_mean_vector(submitted_words))[0][0]
     else:
@@ -229,7 +228,7 @@ ARGUMENTS :
     vector_model = KeyedVectors.load_word2vec_format(filename, binary=True, unicode_errors="ignore")
     if possible_args[1] in arguments:
         test_reddit_creds()
-    words = main(model=vector_model, no_ui=possible_args[2] in arguments, threshold=0.06,
+    words = main(model=vector_model, no_ui=possible_args[2] in arguments, threshold=0.1,
                  cemantle=possible_args[4] in arguments, browser=browser)
     if possible_args[1] in arguments:
         send_message_to_reddit(words)

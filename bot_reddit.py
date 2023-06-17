@@ -34,5 +34,5 @@ def send_message_to_reddit(best_words: list[str]):
     message += """Disclaimer : Je suis un bot dont le but est d'empêcher les gens de rester bloqués trop longtemps au jeu et d'être trop frustré. Si vous jugez que ça va contre l'esprit du jeu, répondez au commentaire et j'enlèverai le bot. """
     print(message)
 
-    submission = reddit.submission(url="https://www.reddit.com/r/cemantix/comments/14877xg/c%C3%A9mantix_468/")
+    submission = reddit.submission(url="https://www.reddit.com/r/cemantix/comments/14an69d/c%C3%A9mantix_471/")
     submission.reply(message)
