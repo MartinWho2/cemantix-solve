@@ -5,181 +5,192 @@ import time, math, random
 import numpy as np
 from bot_reddit import send_message_to_reddit, test_reddit_creds
 
+class Cemantix_Solver:
+    def __init__(self, vector_model:KeyedVectors,no_ui:bool, cemantle:bool, browser:str, threshold:float):
+        self.model = vector_model
+        self.no_ui = no_ui
+        self.cemantle = cemantle
+        self.browser = browser
+        self.threshold = threshold
+        self.website_name = "cemantix" if not self.cemantle else "cemantle"
+        self.driver = self.setup_driver()
+        self.input = self.driver.find_element('id', self.website_name + '-guess')
+        self.minimal_temp = self.get_minimal_temp()
+        self.highest_score = -10000
+        self.closest_dist = -1
+        self.highest_words = {}
+        self.idx_in_file = 0
+        self.tested_words = []
+        self.submitted_words = []
+        self.words_file = self.read_file("pedantix-principaux.txt")
 
-def compute_highest_words(all_words: list[str], highest_score: float, threshold: float) -> dict[float, str]:
-    print("[LOG] Computing best words...")
-    highests_dict = {}
-    highest_score_root = math.sqrt(max(highest_score, 0))
-    for entry in all_words:
-        word_tested = entry.split(" ")
-        if len(word_tested) < 3:
-            continue
-        if word_tested[2] == "":
-            print(all_words)
-        score = float(word_tested[2].replace(",", ".") if not word_tested[2] == '' else "-1111.0")
-        if (score > 0) and (highest_score_root - math.sqrt(score)) < threshold * highest_score_root:
-            highests_dict[score] = word_tested[1]
-    # highests = [value for key, value in sorted(highests_dict.items(), reverse=True)]
-    print("[LOG] The best word(s) : ", highests_dict)
-    return highests_dict
+    def get_minimal_temp(self):
+        minimal_temp = self.driver.find_element('id', self.website_name + "-summary")
+        minimal_temp = minimal_temp.text.splitlines(keepends=False)
+        minimal_temp = [m for m in minimal_temp if m.startswith("1 ")][0]
+        return float(minimal_temp.split(" ")[2].replace(",", "."))
+    def read_file(self, filename:str):
+        with open(filename, "r", encoding="utf-8") as words:
+            word_list = [w.strip() for w in words.readlines()]
+        return word_list
+    def compute_highest_words(self,all_words: list[str]) -> dict[float, str]:
+        print("[LOG] Computing best words...")
+        highests_dict = {}
+        highest_score_root = math.sqrt(max(self.highest_score, 0))
+        for entry in all_words:
+            word_tested = entry.split(" ")
+            if len(word_tested) < 3:
+                continue
+            if word_tested[2] == "":
+                print(all_words)
+            score = float(word_tested[2].replace(",", ".") if not word_tested[2] == '' else "-1111.0")
+            if (score > 0) and (highest_score_root - math.sqrt(score)) < self.threshold * highest_score_root:
+                highests_dict[score] = word_tested[1]
+        # highests = [value for key, value in sorted(highests_dict.items(), reverse=True)]
+        print("[LOG] The best word(s) : ", highests_dict)
+        return highests_dict
 
 
-def compute_weighted_mean(vectors: list[np.ndarray], scores: list[float]) -> np.ndarray:
-    vector = np.zeros(vectors[0].shape)
-    s = sum([a for a in scores])
-    weights = [score / s for score in scores]
-    for i, v in enumerate(vectors):
-        vector += weights[i] * v
-    if random.randint(0, 10) == 0:
-        vector[random.randint(0, vector.shape[0] - 1)] += 0.2
-    return vector
+    @staticmethod
+    def compute_weighted_mean(vectors: list[np.ndarray], scores: list[float]) -> np.ndarray:
+        vector = np.zeros(vectors[0].shape)
+        s = sum([a for a in scores])
+        weights = [score / s for score in scores]
+        for i, v in enumerate(vectors):
+            vector += weights[i] * v
+        if random.randint(0, 10) == 0:
+            vector[random.randint(0, vector.shape[0] - 1)] += 0.2
+        return vector
 
 
-def new_random_word(last_vector: np.ndarray, all_words: str, model: KeyedVectors, tested_words: list[str]):
-    last_vector_copy = last_vector.copy()
-    sim_word = model.most_similar(last_vector)[0][0]
-    i = 0
-    while abs(model.similarity(model.most_similar(last_vector_copy)[0][0], sim_word)) > 0.08 \
-            or abs(model.similarity(all_words, sim_word)) > 0.08 \
-            or model.most_similar(last_vector, topn=1)[0][0].strip() in tested_words:
-        last_vector[random.randint(0, last_vector.shape[0] - 1)] += 0.5
-        last_vector[random.randint(0, last_vector.shape[0] - 1)] -= 0.5
-        last_vector *= -1
-        sim_word = model.most_similar(last_vector)[0][0]
-        print(f"done {i}")
-        i += 1
-    return model.most_similar(last_vector)[0][0]
-
-
-def next_words(highest_words: dict[float, str], highest_score: int, model: KeyedVectors, idx_next_word_in_file: int,
-               words_file: list[str], tested_words: list[str], closest_dist: int, last_random_vector: np.ndarray,
-               submitted_words: list[str], topn: int = 20) -> [str, int]:
-    if highest_score > 15:
-        kvs = [(k, v) for k, v in highest_words.items()]
-        if closest_dist < 965 and highest_score > 20:
-            vectors = [model.get_vector(i[1]) for i in kvs]
-            vector_to_test = compute_weighted_mean(vectors, [kv[0] for kv in kvs])
-            new_words = model.most_similar(positive=vector_to_test, topn=topn)
-        else:
-            new_words = model.most_similar(positive=[i[1] for i in kvs], topn=topn)
+    def new_random_word(self,last_vector: np.ndarray, all_words: str):
+        last_vector_copy = last_vector.copy()
+        sim_word = self.model.most_similar(last_vector)[0][0]
         i = 0
-        found_one = True
-        while new_words[i][0] in tested_words:
+        while abs(self.model.similarity(self.model.most_similar(last_vector_copy)[0][0], sim_word)) > 0.08 \
+                or abs(self.model.similarity(all_words, sim_word)) > 0.08 \
+                or self.model.most_similar(last_vector, topn=1)[0][0].strip() in self.tested_words:
+            last_vector[random.randint(0, last_vector.shape[0] - 1)] += 0.5
+            last_vector[random.randint(0, last_vector.shape[0] - 1)] -= 0.5
+            last_vector *= -1
+            sim_word = self.model.most_similar(last_vector)[0][0]
+            print(f"done {i}")
             i += 1
-            if i == len(new_words):
-                found_one = False
-                break
-        if found_one:
-            return [new_words[i][0], idx_next_word_in_file]
-        if closest_dist > 700 or idx_next_word_in_file == len(words_file):
-            return next_words(highest_words, highest_score, model, idx_next_word_in_file, words_file, tested_words,
-                              closest_dist, last_random_vector, submitted_words, topn=int(topn * 1.5))
-    if idx_next_word_in_file != len(words_file):
-        word = words_file[idx_next_word_in_file]
-        idx_next_word_in_file += 1
-        return [word, idx_next_word_in_file]
-    if len(submitted_words) > 2:
-        mean_word = model.most_similar(model.get_mean_vector(submitted_words))[0][0]
-    else:
-        mean_word = np.zeros(last_random_vector.shape)
-        mean_word[random.randint(0, last_random_vector.shape[0] - 1)] = 1.
-        mean_word = model.most_similar(mean_word)[0][0]
-    return [new_random_word(last_random_vector, mean_word, model, tested_words), idx_next_word_in_file]
+        return self.model.most_similar(last_vector)[0][0]
 
 
-def setup_driver(no_ui: bool, website_name: str, browser: str):
-    if browser == "firefox":
-        if no_ui:
-            opt = webdriver.FirefoxOptions()
-            opt.add_argument('-headless')
-            driver = webdriver.Firefox(options=opt)
+    def next_words(self, last_random_vector: np.ndarray,topn: int = 20) -> str:
+        if self.highest_score > 15:
+            kvs = [(k, v) for k, v in self.highest_words.items()]
+            if self.closest_dist < 965 and self.highest_score > 20:
+                vectors = [self.model.get_vector(i[1]) for i in kvs]
+                vector_to_test = self.compute_weighted_mean(vectors, [kv[0] for kv in kvs])
+                new_words = self.model.most_similar(positive=vector_to_test, topn=topn)
+            else:
+                new_words = self.model.most_similar(positive=[i[1] for i in kvs], topn=topn)
+            i = 0
+            found_one = True
+            while new_words[i][0] in self.tested_words:
+                i += 1
+                if i == len(new_words):
+                    found_one = False
+                    break
+            if found_one:
+                return new_words[i][0]
+            if self.closest_dist > 700 or self.idx_in_file == len(self.words_file):
+                return self.next_words(last_random_vector, topn=int(topn * 1.5))
+        if self.idx_in_file != len(self.words_file):
+            word = self.words_file[self.idx_in_file]
+            self.idx_in_file += 1
+            return word
+        if len(self.submitted_words) > 2:
+            mean_word = self.model.most_similar(self.model.get_mean_vector(self.submitted_words))[0][0]
         else:
-            driver = webdriver.Firefox()
-    elif browser == "edge":
-        if no_ui:
-            opt = webdriver.EdgeOptions()
-            opt.add_argument('--headless')
-            driver = webdriver.Edge(options=opt)
+            mean_word = np.zeros(last_random_vector.shape)
+            mean_word[random.randint(0, last_random_vector.shape[0] - 1)] = 1.
+            mean_word = self.model.most_similar(mean_word)[0][0]
+        return self.new_random_word(last_random_vector, mean_word)
+
+
+    def setup_driver(self):
+        if self.browser == "firefox":
+            if self.no_ui:
+                opt = webdriver.FirefoxOptions()
+                opt.add_argument('-headless')
+                driver = webdriver.Firefox(options=opt)
+            else:
+                driver = webdriver.Firefox()
+        elif self.browser == "edge":
+            if self.no_ui:
+                opt = webdriver.EdgeOptions()
+                opt.add_argument('--headless')
+                driver = webdriver.Edge(options=opt)
+            else:
+                driver = webdriver.Edge()
+        elif self.browser == "safari":
+            if self.no_ui:
+                print("ERROR : Safari can't be run without UI, sorry :(")
+                sys.exit(0)
+            else:
+                driver = webdriver.Safari()
+        elif self.browser == "chrome":
+            if self.no_ui:
+                opt = webdriver.ChromeOptions()
+                opt.add_argument('--headless')
+                driver = webdriver.Chrome(options=opt)
+            else:
+                driver = webdriver.Chrome()
         else:
-            driver = webdriver.Edge()
-    elif browser == "safari":
-        if no_ui:
-            print("ERROR : Safari can't be run without UI, sorry :(")
+            print("Error : unrecognized browser...")
             sys.exit(0)
-        else:
-            driver = webdriver.Safari()
-    elif browser == "chrome":
-        if no_ui:
-            opt = webdriver.ChromeOptions()
-            opt.add_argument('--headless')
-            driver = webdriver.Chrome(options=opt)
-        else:
-            driver = webdriver.Chrome()
-    else:
-        print("Error : unrecognized browser...")
-        sys.exit(0)
-    driver.get('https://' + website_name + '.certitudes.org')
-    driver.find_element('id', 'dialog-close').click()
-    return driver
+        driver.get('https://' + self.website_name + '.certitudes.org')
+        driver.find_element('id', 'dialog-close').click()
+        return driver
 
 
-def main(model: KeyedVectors, no_ui: bool, cemantle: bool, browser: str, threshold: float = 0.06):
-    website_name = "cemantix" if not cemantle else "cemantle"
-    driver = setup_driver(no_ui, website_name, browser)
-    a = driver.find_element('id', website_name + '-guess')
-    highest_score = -10000
-    closest_distance = -1
-    highest_words = {}
-    idx_in_file = 0
-    tested_words = []
-    submitted_words = []
-    with open("pedantix-principaux.txt", "r", encoding="utf-8") as words:
-        word_list = [w.strip() for w in words.readlines()]
-    won = False
-    while not won:
-        ran_vector = np.zeros(model.vector_size)
-        ran_vector[random.randint(0, ran_vector.shape[0] - 1)] = random.randrange(-1, 1)
-        ran_vector[random.randint(0, ran_vector.shape[0] - 1)] = random.randrange(-1, 1)
-        word, idx_in_file = next_words(highest_words.copy(), highest_score, model, idx_in_file, word_list, tested_words,
-                                       closest_distance, ran_vector, submitted_words)
-        tested_words.append(word)
-        a.send_keys(word)
-        a.send_keys(webdriver.Keys.ENTER)
-        print("[LOG] Trying a new word : ", word)
-        time.sleep(0.3)
-        if driver.find_element('id', website_name + '-error').text != "":
-            print(f"[WARNING] Word not found")
-            continue
-        submitted_words.append(word)
-        last_guess = driver.find_element('id', website_name + "-guessed")
-        table = driver.find_element('id', website_name + "-guesses")
-        splitted = last_guess.text.split(" ")
-        if len(splitted) >= 2:
-            while splitted[2] == '':
-                time.sleep(0.2)
-                last_guess = driver.find_element('id', website_name + "-guessed")
-                splitted = last_guess.text.split(" ")
-            if len(splitted) > 4 and splitted[4] != '' and int(splitted[4]) > closest_distance:
-                closest_distance = int(splitted[4])
-            if closest_distance == 1000:
-                won = True
-                word_victory = word
-                number_guesses = int(splitted[0])
-            last_guess_score = float(splitted[2].replace(",", "."))
-            print("[LOG] Last Guess : " + last_guess.text, " , Score : ", last_guess_score)
-            if last_guess_score > highest_score:
-                print("[LOG] Found a better word !! ")
-                highest_score = last_guess_score
-            words_to_compute = table.text.split("\n")
-            words_to_compute.append(last_guess.text)
-            highest_words = compute_highest_words(words_to_compute, highest_score, threshold)
-    time.sleep(0.5)
-    driver.find_element('id', website_name + '-see').click()
-    time.sleep(1)
-    all_words = [element.split(" ")[1] if element.split(" ")[0].isdigit() else element.split(" ")[0] for element in
-                 driver.find_element('id', website_name + '-guesses').text.split("\n")]
-    # driver.quit()
-    return all_words
+    def solve(self):
+        won = False
+        while not won:
+            ran_vector = np.zeros(self.model.vector_size)
+            ran_vector[random.randint(0, ran_vector.shape[0] - 1)] = random.randrange(-1, 1)
+            ran_vector[random.randint(0, ran_vector.shape[0] - 1)] = random.randrange(-1, 1)
+            word = self.next_words(ran_vector)
+            self.tested_words.append(word)
+            self.input.send_keys(word)
+            self.input.send_keys(webdriver.Keys.ENTER)
+            print("[LOG] Trying a new word : ", word)
+            time.sleep(0.3)
+            if self.driver.find_element('id', self.website_name + '-error').text != "":
+                print(f"[WARNING] Word not found")
+                continue
+            self.submitted_words.append(word)
+            last_guess = self.driver.find_element('id', self.website_name + "-guessed")
+            table = self.driver.find_element('id', self.website_name + "-guesses")
+            splitted = last_guess.text.split(" ")
+            if len(splitted) >= 2:
+                while splitted[2] == '':
+                    time.sleep(0.2)
+                    last_guess = self.driver.find_element('id', self.website_name + "-guessed")
+                    splitted = last_guess.text.split(" ")
+                if len(splitted) > 4 and splitted[4] != '' and int(splitted[4]) > self.closest_dist:
+                    self.closest_dist = int(splitted[4])
+                if self.closest_dist == 1000:
+                    won = True
+                last_guess_score = float(splitted[2].replace(",", "."))
+                print("[LOG] Last Guess : " + last_guess.text, " , Score : ", last_guess_score)
+                if last_guess_score > self.highest_score:
+                    print("[LOG] Found a better word !! ")
+                    self.highest_score = last_guess_score
+                words_to_compute = table.text.split("\n")
+                words_to_compute.append(last_guess.text)
+                self.highest_words = self.compute_highest_words(words_to_compute)
+        time.sleep(0.5)
+        self.driver.find_element('id', self.website_name + '-see').click()
+        time.sleep(1)
+        all_words = [element.split(" ")[1] if element.split(" ")[0].isdigit() else element.split(" ")[0] for element in
+                     self.driver.find_element('id', self.website_name + '-guesses').text.split("\n")]
+        # driver.quit()
+        return all_words
 
 
 if __name__ == '__main__':
@@ -229,7 +240,8 @@ ARGUMENTS :
     vector_model = KeyedVectors.load_word2vec_format(filename, binary=True, unicode_errors="ignore")
     if possible_args[1] in arguments:
         test_reddit_creds()
-    words = main(model=vector_model, no_ui=possible_args[2] in arguments, threshold=0.06,
+    solver = Cemantix_Solver(vector_model=vector_model, no_ui=possible_args[2] in arguments, threshold=0.06,
                  cemantle=possible_args[4] in arguments, browser=browser)
+    words = solver.solve()
     if possible_args[1] in arguments:
         send_message_to_reddit(words)

@@ -1,5 +1,19 @@
 nature
 art
+étoile
+rivière
+méditation
+cuisine
+vélo
+parfum
+tapisserie
+échecs
+biologie
+dune
+ville
+bibliothèque
+promotion
+publicité
 politique
 religion
 jamais
@@ -40,7 +54,6 @@ soleil
 calorie
 france
 époque
-1950
 réalisateur
 création
 bancal
