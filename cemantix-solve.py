@@ -74,9 +74,10 @@ def next_words(highest_words: dict[float, str], highest_score: int, model: Keyed
         if closest_dist > 700 or idx_next_word_in_file == len(words_file):
             return next_words(highest_words, highest_score, model, idx_next_word_in_file, words_file, tested_words,
                               closest_dist, last_random_vector, submitted_words, topn=int(topn * 1.5))
-    word = words_file[idx_next_word_in_file]
-    idx_next_word_in_file += 1
-    return [word, idx_next_word_in_file]
+    if idx_next_word_in_file != len(words_file):
+        word = words_file[idx_next_word_in_file]
+        idx_next_word_in_file += 1
+        return [word, idx_next_word_in_file]
     if len(submitted_words) > 2:
         mean_word = model.most_similar(model.get_mean_vector(submitted_words))[0][0]
     else:
@@ -228,7 +229,7 @@ ARGUMENTS :
     vector_model = KeyedVectors.load_word2vec_format(filename, binary=True, unicode_errors="ignore")
     if possible_args[1] in arguments:
         test_reddit_creds()
-    words = main(model=vector_model, no_ui=possible_args[2] in arguments, threshold=0.1,
+    words = main(model=vector_model, no_ui=possible_args[2] in arguments, threshold=0.06,
                  cemantle=possible_args[4] in arguments, browser=browser)
     if possible_args[1] in arguments:
         send_message_to_reddit(words)

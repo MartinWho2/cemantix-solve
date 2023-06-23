@@ -9,6 +9,7 @@ ordinateur
 écrire
 animal
 maison
+sport
 technologie
 matériau
 nourriture
@@ -37,3 +38,12 @@ répartie
 volontaire
 soleil
 calorie
+france
+époque
+1950
+réalisateur
+création
+bancal
+non
+crier
+pluie
