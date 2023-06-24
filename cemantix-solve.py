@@ -18,12 +18,16 @@ class Cemantix_Solver:
         self.minimal_temp = self.get_minimal_temp()
         self.highest_score = -10000
         self.closest_dist = -1
+        self.TEMPERATURE_FACTOR_THRESHOLD = 10_000
         self.highest_words = {}
         self.idx_in_file = 0
         self.tested_words = []
         self.submitted_words = []
         self.words_file = self.read_file("pedantix-principaux.txt")
-
+    def get_temperature_threshold(self):
+        if self.closest_dist < 0:
+            return 0
+        return self.TEMPERATURE_FACTOR_THRESHOLD // pow(self.closest_dist,0.7)
     def get_minimal_temp(self):
         minimal_temp = self.driver.find_element('id', self.website_name + "-summary")
         minimal_temp = minimal_temp.text.splitlines(keepends=False)
@@ -36,32 +40,37 @@ class Cemantix_Solver:
     def compute_highest_words(self,all_words: list[str]) -> dict[float, str]:
         print("[LOG] Computing best words...")
         highests_dict = {}
-        highest_score_root = math.sqrt(max(self.highest_score, 0))
+        threshold = self.get_temperature_threshold()
+        print(f"[LOG] Threshold : {threshold}")
         for entry in all_words:
             word_tested = entry.split(" ")
             if len(word_tested) < 3:
                 continue
-            if word_tested[2] == "":
-                print(all_words)
-            score = float(word_tested[2].replace(",", ".") if not word_tested[2] == '' else "-1111.0")
-            if (score > 0) and (highest_score_root - math.sqrt(score)) < self.threshold * highest_score_root:
+            score = float(word_tested[2].replace(",", ".") if not word_tested[2] == '' else "-1")
+            temperature = int(word_tested[4] if (len(word_tested) >= 5 and word_tested[4] != '') else "-100")
+            if (self.closest_dist >= 0 and self.closest_dist - temperature < threshold) or \
+                    (self.closest_dist < 50 and self.highest_score - score < self.threshold * self.highest_score):
                 highests_dict[score] = word_tested[1]
         # highests = [value for key, value in sorted(highests_dict.items(), reverse=True)]
         print("[LOG] The best word(s) : ", highests_dict)
         return highests_dict
 
 
-    @staticmethod
-    def compute_weighted_mean(vectors: list[np.ndarray], scores: list[float]) -> np.ndarray:
+    def compute_weighted_mean(self, vectors: list[np.ndarray], scores: list[float]) -> np.ndarray:
         vector = np.zeros(vectors[0].shape)
-        s = sum([a for a in scores])
-        weights = [score / s for score in scores]
+        s = sum([a**3 for a in scores])
+        weights = [score**3 / s for score in scores]
         for i, v in enumerate(vectors):
             vector += weights[i] * v
-        if random.randint(0, 10) == 0:
-            vector[random.randint(0, vector.shape[0] - 1)] += 0.2
+        if random.randint(0, 1) == 0:
+            print("[LOG]  RANDOMIZING")
+            vector = self.randomize_vector(vector)
         return vector
 
+    def randomize_vector(self, vector: np.ndarray) -> np.ndarray:
+        for i in range(10):
+            vector[random.randint(0, vector.shape[0] - 1)] *= 1 + random.randint(-5,5)/ 10
+        return vector
 
     def new_random_word(self,last_vector: np.ndarray, all_words: str):
         last_vector_copy = last_vector.copy()
@@ -80,14 +89,18 @@ class Cemantix_Solver:
 
 
     def next_words(self, last_random_vector: np.ndarray,topn: int = 20) -> str:
-        if self.highest_score > 15:
+        if self.highest_score > self.minimal_temp-5:
             kvs = [(k, v) for k, v in self.highest_words.items()]
-            if self.closest_dist < 965 and self.highest_score > 20:
+            if 200 < self.closest_dist < 965:
                 vectors = [self.model.get_vector(i[1]) for i in kvs]
                 vector_to_test = self.compute_weighted_mean(vectors, [kv[0] for kv in kvs])
                 new_words = self.model.most_similar(positive=vector_to_test, topn=topn)
             else:
                 new_words = self.model.most_similar(positive=[i[1] for i in kvs], topn=topn)
+                if random.randint(1,4) == 4:
+                    vector = np.copy(self.model.get_vector(new_words[0][0]))
+                    vector = self.randomize_vector(vector)
+                    new_words = self.model.most_similar(positive=[vector], topn=topn)
             i = 0
             found_one = True
             while new_words[i][0] in self.tested_words:
@@ -236,11 +249,11 @@ ARGUMENTS :
             )
             sys.exit(0)
     else:
-        browser = "firefox"
+        browser = "chrome"
     vector_model = KeyedVectors.load_word2vec_format(filename, binary=True, unicode_errors="ignore")
     if possible_args[1] in arguments:
         test_reddit_creds()
-    solver = Cemantix_Solver(vector_model=vector_model, no_ui=possible_args[2] in arguments, threshold=0.06,
+    solver = Cemantix_Solver(vector_model=vector_model, no_ui=possible_args[2] in arguments, threshold=0.03,
                  cemantle=possible_args[4] in arguments, browser=browser)
     words = solver.solve()
     if possible_args[1] in arguments:
