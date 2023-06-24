@@ -64,12 +64,12 @@ class Cemantix_Solver:
             vector += weights[i] * v
         if random.randint(0, 1) == 0:
             print("[LOG]  RANDOMIZING")
-            vector = self.randomize_vector(vector)
+            vector = self.randomize_vector(vector, impact=random.randint(0, 10))
         return vector
 
-    def randomize_vector(self, vector: np.ndarray) -> np.ndarray:
-        for i in range(10):
-            vector[random.randint(0, vector.shape[0] - 1)] *= 1 + random.randint(-5,5)/ 10
+    def randomize_vector(self, vector: np.ndarray, impact:int) -> np.ndarray:
+        for i in range(vector.shape[0] * impact // 100):
+            vector[random.randint(0, vector.shape[0] - 1)] *= 1 + random.randint(-impact,impact)/ 10
         return vector
 
     def new_random_word(self,last_vector: np.ndarray, all_words: str):
@@ -95,21 +95,28 @@ class Cemantix_Solver:
                 vectors = [self.model.get_vector(i[1]) for i in kvs]
                 vector_to_test = self.compute_weighted_mean(vectors, [kv[0] for kv in kvs])
                 new_words = self.model.most_similar(positive=vector_to_test, topn=topn)
+                best_shot = ""
+                for word, score in new_words:
+                    if word in self.tested_words:
+                        continue
+                    best_shot = word
+                    break
             else:
                 new_words = self.model.most_similar(positive=[i[1] for i in kvs], topn=topn)
-                if random.randint(1,4) == 4:
-                    vector = np.copy(self.model.get_vector(new_words[0][0]))
-                    vector = self.randomize_vector(vector)
-                    new_words = self.model.most_similar(positive=[vector], topn=topn)
-            i = 0
-            found_one = True
-            while new_words[i][0] in self.tested_words:
-                i += 1
-                if i == len(new_words):
-                    found_one = False
-                    break
-            if found_one:
-                return new_words[i][0]
+                best_shot = ""
+                for word, score in new_words:
+                    if word in self.tested_words:
+                        continue
+                    if self.closest_dist > 975:
+                        new_topn = (1000-self.closest_dist)*2
+                    else:
+                        new_topn = 20
+                    sim_words = [w[0] for w in self.model.most_similar(word,topn=new_topn)]
+                    if kvs[0][1] in sim_words:
+                        best_shot = word
+                        break
+            if best_shot != "":
+                return best_shot
             if self.closest_dist > 700 or self.idx_in_file == len(self.words_file):
                 return self.next_words(last_random_vector, topn=int(topn * 1.5))
         if self.idx_in_file != len(self.words_file):
