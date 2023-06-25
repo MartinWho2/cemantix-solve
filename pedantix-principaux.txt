@@ -11,6 +11,7 @@ intérieur
 croyance
 ville
 politique
+famille
 religion
 pays
 philosophie
@@ -19,6 +20,7 @@ création
 allégorie
 musique
 herbe
+enfant
 nourriture
 soleil
 physique
@@ -44,6 +46,7 @@ technologie
 mobilier
 tapisserie
 bibliothèque
+hôpital
 boisson
 matériau
 vélo
