@@ -19,6 +19,10 @@ class Cemantix_Solver:
         self.highest_score = -10000
         self.closest_dist = -1
         self.TEMPERATURE_FACTOR_THRESHOLD = 10_000
+        self.NO_TEMP = -100
+        self.ENDGAME_TEMP = 965
+        self.ENDGAME_THRESHOLD = 40
+        self.ONLY_1000s_THRESHOLD = 300
         self.highest_words = {}
         self.idx_in_file = 0
         self.tested_words = []
@@ -37,7 +41,7 @@ class Cemantix_Solver:
         with open(filename, "r", encoding="utf-8") as words:
             word_list = [w.strip() for w in words.readlines()]
         return word_list
-    def compute_highest_words(self,all_words: list[str]) -> dict[float, str]:
+    def compute_highest_words(self,all_words: list[str]) -> dict[float, (str,int)]:
         print("[LOG] Computing best words...")
         highests_dict = {}
         threshold = self.get_temperature_threshold()
@@ -47,25 +51,21 @@ class Cemantix_Solver:
             if len(word_tested) < 3:
                 continue
             score = float(word_tested[2].replace(",", ".") if not word_tested[2] == '' else "-1")
-            temperature = int(word_tested[4] if (len(word_tested) >= 5 and word_tested[4] != '') else "-100")
-            if (self.closest_dist >= 0 and self.closest_dist - temperature < threshold) or \
-                    (self.closest_dist < 50 and self.highest_score - score < self.threshold * self.highest_score):
-                highests_dict[score] = word_tested[1]
+            temperature = int(word_tested[4] if (len(word_tested) >= 5 and word_tested[4] != '') else str(self.NO_TEMP))
+            if self.closest_dist >= self.ENDGAME_TEMP:
+                if math.fabs(self.closest_dist - temperature) < self.ENDGAME_THRESHOLD:
+                    highests_dict[score] = (word_tested[1], temperature)
+            elif self.closest_dist >= self.ONLY_1000s_THRESHOLD:
+                if temperature != self.NO_TEMP:
+                    highests_dict[score] = (word_tested[1], temperature)
+            elif (self.closest_dist >= 0 and self.closest_dist - temperature < 200) or \
+                    (self.highest_score - score < self.threshold * self.highest_score):
+                highests_dict[score] = (word_tested[1], temperature)
         # highests = [value for key, value in sorted(highests_dict.items(), reverse=True)]
         print("[LOG] The best word(s) : ", highests_dict)
         return highests_dict
 
 
-    def compute_weighted_mean(self, vectors: list[np.ndarray], scores: list[float]) -> np.ndarray:
-        vector = np.zeros(vectors[0].shape)
-        s = sum([a**3 for a in scores])
-        weights = [score**3 / s for score in scores]
-        for i, v in enumerate(vectors):
-            vector += weights[i] * v
-        if random.randint(0, 1) == 0:
-            print("[LOG]  RANDOMIZING")
-            vector = self.randomize_vector(vector, impact=random.randint(0, 10))
-        return vector
 
     def randomize_vector(self, vector: np.ndarray, impact:int) -> np.ndarray:
         for i in range(vector.shape[0] * impact // 100):
@@ -86,35 +86,52 @@ class Cemantix_Solver:
             print(f"done {i}")
             i += 1
         return self.model.most_similar(last_vector)[0][0]
-
-
-    def next_words(self, last_random_vector: np.ndarray,topn: int = 20) -> str:
-        if self.highest_score > self.minimal_temp-5:
-            kvs = [(k, v) for k, v in self.highest_words.items()]
-            if 200 < self.closest_dist < 965:
-                vectors = [self.model.get_vector(i[1]) for i in kvs]
-                vector_to_test = self.compute_weighted_mean(vectors, [kv[0] for kv in kvs])
-                new_words = self.model.most_similar(positive=vector_to_test, topn=topn)
-                best_shot = ""
-                for word, score in new_words:
-                    if word in self.tested_words:
-                        continue
-                    best_shot = word
-                    break
+    def next_word_midgame(self, score_temperature_word: list[(float,int,str)], topn:int) -> str:
+        words = [i[2] for i in score_temperature_word]
+        temps = [i[1] for i in score_temperature_word]
+        if self.NO_TEMP in temps:
+            weights = [i[0] for i in score_temperature_word]
+        else:
+            weights = [i[1]**2 for i in score_temperature_word]
+        vector = vector_model.get_mean_vector(words, weights=weights)
+        if random.randint(0, 4) == 0:
+            vector = self.randomize_vector(vector, impact=random.randint(1, 5))
+        new_words = self.model.most_similar(positive=vector, topn=topn)
+        best_shot = ""
+        for word, score in new_words:
+            if word in self.tested_words:
+                continue
+            best_shot = word
+            break
+        return best_shot
+    def is_good_word(self, score_temperature_word, sim_words) -> bool:
+        for stw in score_temperature_word:
+            if stw[2] in sim_words:
+                return True
+        return False
+    def next_word_endgame(self, score_temperature_word: list[(float,int,str)], topn:int) -> str:
+        new_words = self.model.most_similar(positive=[i[2] for i in score_temperature_word], topn=topn)
+        best_shot = ""
+        for word, score in new_words:
+            if word in self.tested_words:
+                continue
+            if self.closest_dist > 975:
+                new_topn = (1000 - self.closest_dist) * 2
             else:
-                new_words = self.model.most_similar(positive=[i[1] for i in kvs], topn=topn)
-                best_shot = ""
-                for word, score in new_words:
-                    if word in self.tested_words:
-                        continue
-                    if self.closest_dist > 975:
-                        new_topn = (1000-self.closest_dist)*2
-                    else:
-                        new_topn = 20
-                    sim_words = [w[0] for w in self.model.most_similar(word,topn=new_topn)]
-                    if kvs[0][1] in sim_words:
-                        best_shot = word
-                        break
+                new_topn = 20
+            sim_words = [w[0] for w in self.model.most_similar(word, topn=new_topn)]
+            if self.is_good_word(score_temperature_word, sim_words):
+                best_shot = word
+                break
+        return best_shot
+
+    def next_words(self, last_random_vector: np.ndarray,topn: int = 30) -> str:
+        if self.highest_score > self.minimal_temp-5:
+            score_temperature_word = [(k, v[1], v[0]) for k, v in self.highest_words.items()]
+            if self.closest_dist < self.ENDGAME_TEMP:
+                best_shot = self.next_word_midgame(score_temperature_word, topn=topn)
+            else:
+                best_shot = self.next_word_endgame(score_temperature_word, topn=topn)
             if best_shot != "":
                 return best_shot
             if self.closest_dist > 700 or self.idx_in_file == len(self.words_file):
