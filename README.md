@@ -3,8 +3,13 @@ This repository was created to make an automatic solver for cémantix.
 It now also includes the code of a reddit bot that gives some hints to the players. 
 
 ## Quick installation
-Go to https://fauconnier.github.io/#data and download a word2vec file of your choice. 
+### Get the database
+For a french database, go to https://fauconnier.github.io/#data and download a word2vec file of your choice. 
 I personally recommend the frWac with 494 MB (dim=700, cut=50,train=skip,lem,no_pos,no_phrase).
+
+For an english one, go to https://code.google.com/archive/p/word2vec/ and download the file `GoogleNews-vectors-negative300.bin.gz` (I only found one).
+
+### Get the script
 
 Clone the repository and launch the main cemantix solve.py script : 
 ```shell
@@ -28,4 +33,4 @@ ARGUMENTS :
 `--browser : Chooses the browser to use (default is firefox) (possibilities : firefox, chrome, edge, safari)`
 
 
-Credits for the word2vec file : https://fauconnier.github.io/#data
+Credits for the word2vec file : https://fauconnier.github.io/#data, google

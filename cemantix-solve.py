@@ -3,7 +3,7 @@ from gensim.models import KeyedVectors
 import sys
 import time, math, random
 import numpy as np
-from bot_reddit import send_message_to_reddit, test_reddit_creds
+from bot_reddit import RedditBot
 
 class Cemantix_Solver:
     def __init__(self, vector_model:KeyedVectors,no_ui:bool, cemantle:bool, browser:str, threshold:float):
@@ -27,7 +27,7 @@ class Cemantix_Solver:
         self.idx_in_file = 0
         self.tested_words = []
         self.submitted_words = []
-        self.words_file = self.read_file("pedantix-principaux.txt")
+        self.words_file = self.read_file(self.website_name+"-themes.txt")
     def get_temperature_threshold(self):
         if self.closest_dist < 0:
             return 0
@@ -61,14 +61,13 @@ class Cemantix_Solver:
             elif (self.closest_dist >= 0 and self.closest_dist - temperature < 200) or \
                     (self.highest_score - score < self.threshold * self.highest_score):
                 highests_dict[score] = (word_tested[1], temperature)
-        # highests = [value for key, value in sorted(highests_dict.items(), reverse=True)]
         print("[LOG] The best word(s) : ", highests_dict)
         return highests_dict
 
 
 
     def randomize_vector(self, vector: np.ndarray, impact:int) -> np.ndarray:
-        for i in range(vector.shape[0] * impact // 100):
+        for i in range(vector.shape[0] // 20):
             vector[random.randint(0, vector.shape[0] - 1)] *= 1 + random.randint(-impact,impact)/ 10
         return vector
 
@@ -92,7 +91,7 @@ class Cemantix_Solver:
         if self.NO_TEMP in temps:
             weights = [i[0] for i in score_temperature_word]
         else:
-            weights = [i[1]**2 for i in score_temperature_word]
+            weights = [i[1]**1.5 for i in score_temperature_word]
         vector = vector_model.get_mean_vector(words, weights=weights)
         if random.randint(0, 4) == 0:
             vector = self.randomize_vector(vector, impact=random.randint(1, 5))
@@ -125,7 +124,7 @@ class Cemantix_Solver:
                 break
         return best_shot
 
-    def next_words(self, last_random_vector: np.ndarray,topn: int = 30) -> str:
+    def next_words(self, last_random_vector: np.ndarray,topn: int = 20) -> str:
         if self.highest_score > self.minimal_temp-5:
             score_temperature_word = [(k, v[1], v[0]) for k, v in self.highest_words.items()]
             if self.closest_dist < self.ENDGAME_TEMP:
@@ -275,10 +274,11 @@ ARGUMENTS :
     else:
         browser = "chrome"
     vector_model = KeyedVectors.load_word2vec_format(filename, binary=True, unicode_errors="ignore")
+    reddit_bot = None
     if possible_args[1] in arguments:
-        test_reddit_creds()
+        reddit_bot = RedditBot(possible_args[4] in arguments)
     solver = Cemantix_Solver(vector_model=vector_model, no_ui=possible_args[2] in arguments, threshold=0.03,
                  cemantle=possible_args[4] in arguments, browser=browser)
     words = solver.solve()
     if possible_args[1] in arguments:
-        send_message_to_reddit(words)
+        reddit_bot.send_message_to_reddit(words)

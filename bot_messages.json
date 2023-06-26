@@ -1,0 +1,14 @@
+{
+  "french": {
+    "title": "Pensez à masquer les spoilers avec `>!mot à cacher!<` sans espace entre les points d'exclamation et le ou les mots à l'intérieur. Le spoiler apparaîtra ainsi : >!mot à cacher!<\n\n",
+    "sitename": "https://cemantix.certitudes.org/",
+    "intro_text": "Voici les indices du jour !\n\n",
+    "disclaimer": "Disclaimer : Je suis un bot dont le but est d'empêcher les gens de rester bloqués trop longtemps au jeu et d'être trop frustré. Si vous jugez que ça va contre l'esprit du jeu, répondez au commentaire et j'enlèverai le bot."
+  },
+  "english": {
+    "title": "Pensez à masquer les spoilers avec `>!mot à cacher!<` sans espace entre les points d'exclamation et le ou les mots à l'intérieur. Le spoiler apparaîtra ainsi : >!mot à cacher!<\n\nIf you type this `>!words to hide!<`, you'll get this >!words to hide!<. Note the lack of spaces between the exclamation marks and the word. If you add spaces, the spoiler tags will still work on new reddit but not on old reddit.\n\n",
+    "sitename": "https://cemantle.certitudes.org/",
+    "intro_text": "Here are the daily hints !\n\n",
+    "disclaimer": "Disclaimer: I'm a bot whose purpose is to prevent people from getting stuck in the game for too long and getting too frustrated. If you feel this goes against the spirit of the game, reply to the comment and I'll remove the bot."
+  }
+}
