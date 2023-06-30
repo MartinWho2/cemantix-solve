@@ -21,7 +21,7 @@ class Cemantix_Solver:
         self.TEMPERATURE_FACTOR_THRESHOLD = 10_000
         self.NO_TEMP = -100
         self.ENDGAME_TEMP = 965
-        self.ENDGAME_THRESHOLD = 40
+        self.ENDGAME_THRESHOLD = 20
         self.ONLY_1000s_THRESHOLD = 300
         self.highest_words = {}
         self.idx_in_file = 0
@@ -109,17 +109,23 @@ class Cemantix_Solver:
                 return True
         return False
     def next_word_endgame(self, score_temperature_word: list[(float,int,str)], topn:int) -> str:
-        new_words = self.model.most_similar(positive=[i[2] for i in score_temperature_word], topn=topn)
+        new_words = self.model.most_similar(positive=[i[2] for i in score_temperature_word[:5]], topn=topn)
         best_shot = ""
         for word, score in new_words:
             if word in self.tested_words:
                 continue
             if self.closest_dist > 975:
-                new_topn = (1000 - self.closest_dist) * 2
+                new_topn = min((1000 - self.closest_dist) * 2,10)
             else:
                 new_topn = 20
             sim_words = [w[0] for w in self.model.most_similar(word, topn=new_topn)]
             if self.is_good_word(score_temperature_word, sim_words):
+                best_shot = word
+                break
+        if best_shot == "" and self.closest_dist > 990:
+            for word, score in new_words:
+                if word in self.tested_words:
+                    continue
                 best_shot = word
                 break
         return best_shot
