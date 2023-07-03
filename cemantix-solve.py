@@ -91,7 +91,7 @@ class Cemantix_Solver:
         if self.NO_TEMP in temps:
             weights = [i[0] for i in score_temperature_word]
         else:
-            weights = [i[1]**1.5 for i in score_temperature_word]
+            weights = [i[1] for i in score_temperature_word]
         vector = vector_model.get_mean_vector(words, weights=weights)
         if random.randint(0, 4) == 0:
             vector = self.randomize_vector(vector, impact=random.randint(1, 5))
@@ -122,7 +122,7 @@ class Cemantix_Solver:
             if self.is_good_word(score_temperature_word, sim_words):
                 best_shot = word
                 break
-        if best_shot == "" and self.closest_dist > 990:
+        if best_shot == "" and self.closest_dist > self.ENDGAME_TEMP:
             for word, score in new_words:
                 if word in self.tested_words:
                     continue
