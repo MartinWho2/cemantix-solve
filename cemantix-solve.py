@@ -5,12 +5,15 @@ import time, math, random
 import numpy as np
 from bot_reddit import RedditBot
 
+
 class Cemantix_Solver:
-    def __init__(self, vector_model:KeyedVectors,no_ui:bool, cemantle:bool, browser:str, threshold:float):
+    def __init__(self, vector_model: KeyedVectors, no_ui: bool, cemantle: bool, browser: str, threshold: float,
+                 browser_path: str):
         self.model = vector_model
         self.no_ui = no_ui
         self.cemantle = cemantle
         self.browser = browser
+        self.browser_path = browser_path
         self.threshold = threshold
         self.website_name = "cemantix" if not self.cemantle else "cemantle"
         self.driver = self.setup_driver()
@@ -27,21 +30,25 @@ class Cemantix_Solver:
         self.idx_in_file = 0
         self.tested_words = []
         self.submitted_words = []
-        self.words_file = self.read_file(self.website_name+"-themes.txt")
+        self.words_file = self.read_file(self.website_name + "-themes.txt")
+
     def get_temperature_threshold(self):
         if self.closest_dist < 0:
             return 0
-        return self.TEMPERATURE_FACTOR_THRESHOLD // pow(self.closest_dist,0.7)
+        return self.TEMPERATURE_FACTOR_THRESHOLD // pow(self.closest_dist, 0.7)
+
     def get_minimal_temp(self):
         minimal_temp = self.driver.find_element('id', self.website_name + "-summary")
         minimal_temp = minimal_temp.text.splitlines(keepends=False)
         minimal_temp = [m for m in minimal_temp if m.startswith("1 ")][0]
         return float(minimal_temp.split(" ")[2].replace(",", "."))
-    def read_file(self, filename:str):
+
+    def read_file(self, filename: str):
         with open(filename, "r", encoding="utf-8") as words:
             word_list = [w.strip() for w in words.readlines()]
         return word_list
-    def compute_highest_words(self,all_words: list[str]) -> dict[float, (str,int)]:
+
+    def compute_highest_words(self, all_words: list[str]) -> dict[float, (str, int)]:
         print("[LOG] Computing best words...")
         highests_dict = {}
         threshold = self.get_temperature_threshold()
@@ -64,14 +71,12 @@ class Cemantix_Solver:
         print("[LOG] The best word(s) : ", highests_dict)
         return highests_dict
 
-
-
-    def randomize_vector(self, vector: np.ndarray, impact:int) -> np.ndarray:
+    def randomize_vector(self, vector: np.ndarray, impact: int) -> np.ndarray:
         for i in range(vector.shape[0] // 20):
-            vector[random.randint(0, vector.shape[0] - 1)] *= 1 + random.randint(-impact,impact)/ 10
+            vector[random.randint(0, vector.shape[0] - 1)] *= 1 + random.randint(-impact, impact) / 10
         return vector
 
-    def new_random_word(self,last_vector: np.ndarray, all_words: str):
+    def new_random_word(self, last_vector: np.ndarray, all_words: str):
         last_vector_copy = last_vector.copy()
         sim_word = self.model.most_similar(last_vector)[0][0]
         i = 0
@@ -85,7 +90,8 @@ class Cemantix_Solver:
             print(f"done {i}")
             i += 1
         return self.model.most_similar(last_vector)[0][0]
-    def next_word_midgame(self, score_temperature_word: list[(float,int,str)], topn:int) -> str:
+
+    def next_word_midgame(self, score_temperature_word: list[(float, int, str)], topn: int) -> str:
         words = [i[2] for i in score_temperature_word]
         temps = [i[1] for i in score_temperature_word]
         if self.NO_TEMP in temps:
@@ -103,19 +109,21 @@ class Cemantix_Solver:
             best_shot = word
             break
         return best_shot
+
     def is_good_word(self, score_temperature_word, sim_words) -> bool:
         for stw in score_temperature_word:
             if stw[2] in sim_words:
                 return True
         return False
-    def next_word_endgame(self, score_temperature_word: list[(float,int,str)], topn:int) -> str:
+
+    def next_word_endgame(self, score_temperature_word: list[(float, int, str)], topn: int) -> str:
         new_words = self.model.most_similar(positive=[i[2] for i in score_temperature_word[:5]], topn=topn)
         best_shot = ""
         for word, score in new_words:
             if word in self.tested_words:
                 continue
             if self.closest_dist > 975:
-                new_topn = min((1000 - self.closest_dist) * 2,10)
+                new_topn = min((1000 - self.closest_dist) * 2, 10)
             else:
                 new_topn = 20
             sim_words = [w[0] for w in self.model.most_similar(word, topn=new_topn)]
@@ -130,8 +138,8 @@ class Cemantix_Solver:
                 break
         return best_shot
 
-    def next_words(self, last_random_vector: np.ndarray,topn: int = 20) -> str:
-        if self.highest_score > self.minimal_temp-5:
+    def next_words(self, last_random_vector: np.ndarray, topn: int = 20) -> str:
+        if self.highest_score > self.minimal_temp - 5:
             score_temperature_word = [(k, v[1], v[0]) for k, v in self.highest_words.items()]
             if self.closest_dist < self.ENDGAME_TEMP:
                 best_shot = self.next_word_midgame(score_temperature_word, topn=topn)
@@ -152,13 +160,13 @@ class Cemantix_Solver:
             mean_word[random.randint(0, last_random_vector.shape[0] - 1)] = 1.
             mean_word = self.model.most_similar(mean_word)[0][0]
         return self.new_random_word(last_random_vector, mean_word)
-
-
     def setup_driver(self):
         if self.browser == "firefox":
             if self.no_ui:
                 opt = webdriver.FirefoxOptions()
                 opt.add_argument('-headless')
+                if self.browser_path is not None:
+                    opt.binary_location = browser_path
                 driver = webdriver.Firefox(options=opt)
             else:
                 driver = webdriver.Firefox()
@@ -166,6 +174,8 @@ class Cemantix_Solver:
             if self.no_ui:
                 opt = webdriver.EdgeOptions()
                 opt.add_argument('--headless')
+                if self.browser_path is not None:
+                    opt.binary_location = browser_path
                 driver = webdriver.Edge(options=opt)
             else:
                 driver = webdriver.Edge()
@@ -175,10 +185,12 @@ class Cemantix_Solver:
                 sys.exit(0)
             else:
                 driver = webdriver.Safari()
-        elif self.browser == "chrome":
+        elif self.browser in {"chrome", "chromium"}:
             if self.no_ui:
                 opt = webdriver.ChromeOptions()
                 opt.add_argument('--headless')
+                if self.browser_path is not None:
+                    opt.binary_location = browser_path
                 driver = webdriver.Chrome(options=opt)
             else:
                 driver = webdriver.Chrome()
@@ -188,7 +200,6 @@ class Cemantix_Solver:
         driver.get('https://' + self.website_name + '.certitudes.org')
         driver.find_element('id', 'dialog-close').click()
         return driver
-
 
     def solve(self):
         won = False
@@ -236,9 +247,9 @@ class Cemantix_Solver:
 
 
 if __name__ == '__main__':
-    possible_args = ["--help", "--reddit", "--no-ui", "--vector-file", "--cemantle", "--browser"]
-    args_with_postfix = [possible_args[3], possible_args[5]]
-    browser_args = ["firefox", "safari", "chrome", "edge"]
+    possible_args = ["--help", "--reddit", "--no-ui", "--vector-file", "--cemantle", "--browser", "--browser-path"]
+    args_with_postfix = [possible_args[3], possible_args[5], possible_args[6]]
+    browser_args = ["firefox", "safari", "chrome", "edge", "chromium"]
     arguments = sys.argv[1:]
     for i, a in enumerate(arguments):
         if a not in possible_args and i != 0 and arguments[i - 1] not in args_with_postfix:
@@ -253,7 +264,8 @@ ARGUMENTS :
 --help : shows you this page
 --reddit : Sends some hints to the daily reddit page (please do not spam it!)
 --no-ui : Launches the browser without graphical interface
---browser : Chooses the browser to use (default is firefox) (possibilities : firefox, chrome, edge, safari)
+--browser : Chooses the browser to use (default is chrome) (possibilities : firefox, chrome, edge, safari, chromium)
+--browser-path : Only use if the path of your browser can't be detected by selenium (aka using chromium)
 --cemantle : Uses cemantle instead of cemantix (be careful to use an english word2vec file)
 --vector-file : Select the name of the pretrained word2vec file you want to use (default is frWac_no_postag_no_phrase_700_skip_cut50.bin)""")
         sys.exit(0)
@@ -279,12 +291,21 @@ ARGUMENTS :
             sys.exit(0)
     else:
         browser = "chrome"
+    if possible_args[6] in arguments:
+        if (idx := arguments.index(possible_args[6])) == len(arguments):
+            print(
+                "ERROR : You need to specify the browser path if you specify the --browser-path argument"
+            )
+            sys.exit(0)
+        browser_path = arguments[idx + 1]
+    else:
+        browser_path = None
     vector_model = KeyedVectors.load_word2vec_format(filename, binary=True, unicode_errors="ignore")
     reddit_bot = None
     if possible_args[1] in arguments:
         reddit_bot = RedditBot(possible_args[4] in arguments)
     solver = Cemantix_Solver(vector_model=vector_model, no_ui=possible_args[2] in arguments, threshold=0.03,
-                 cemantle=possible_args[4] in arguments, browser=browser)
+                             cemantle=possible_args[4] in arguments, browser=browser, browser_path=browser_path)
     words = solver.solve()
     if possible_args[1] in arguments:
         reddit_bot.send_message_to_reddit(words)
