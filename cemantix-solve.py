@@ -162,23 +162,19 @@ class Cemantix_Solver:
         return self.new_random_word(last_random_vector, mean_word)
     def setup_driver(self):
         if self.browser == "firefox":
+            opt = webdriver.FirefoxOptions()
             if self.no_ui:
-                opt = webdriver.FirefoxOptions()
                 opt.add_argument('-headless')
-                if self.browser_path is not None:
-                    opt.binary_location = browser_path
-                driver = webdriver.Firefox(options=opt)
-            else:
-                driver = webdriver.Firefox()
+            if self.browser_path is not None:
+                opt.binary_location = browser_path
+            driver = webdriver.Firefox(options=opt)
         elif self.browser == "edge":
+            opt = webdriver.EdgeOptions()
             if self.no_ui:
-                opt = webdriver.EdgeOptions()
                 opt.add_argument('--headless')
-                if self.browser_path is not None:
-                    opt.binary_location = browser_path
-                driver = webdriver.Edge(options=opt)
-            else:
-                driver = webdriver.Edge()
+            if self.browser_path is not None:
+                opt.binary_location = browser_path
+            driver = webdriver.Edge(options=opt)
         elif self.browser == "safari":
             if self.no_ui:
                 print("ERROR : Safari can't be run without UI, sorry :(")
@@ -186,14 +182,12 @@ class Cemantix_Solver:
             else:
                 driver = webdriver.Safari()
         elif self.browser in {"chrome", "chromium"}:
+            opt = webdriver.ChromeOptions()
             if self.no_ui:
-                opt = webdriver.ChromeOptions()
                 opt.add_argument('--headless')
-                if self.browser_path is not None:
-                    opt.binary_location = browser_path
-                driver = webdriver.Chrome(options=opt)
-            else:
-                driver = webdriver.Chrome()
+            if self.browser_path is not None:
+                opt.binary_location = browser_path
+            driver = webdriver.Chrome(options=opt)
         else:
             print("Error : unrecognized browser...")
             sys.exit(0)
