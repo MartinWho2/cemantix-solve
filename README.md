@@ -36,4 +36,6 @@ ARGUMENTS : (All arguments are optional)
 
 `--abs-path : Only use if you are not launching the program from the same folder as the python file`
 
+`--time-limit : Select the time limit the program can run in seconds (default has no limit)""")`
+
 Credits for the word2vec file : https://fauconnier.github.io/#data, google

@@ -10,7 +10,7 @@ from bot_reddit import RedditBot
 
 class Cemantix_Solver:
     def __init__(self, vector_model: KeyedVectors, no_ui: bool, cemantle: bool, browser: str, threshold: float,
-                 browser_path: str, abs_path: str):
+                 browser_path: str, abs_path: str, time_limit: int):
         self.model = vector_model
         self.no_ui = no_ui
         self.cemantle = cemantle
@@ -34,6 +34,8 @@ class Cemantix_Solver:
         self.tested_words = []
         self.submitted_words = []
         self.words_file = self.read_file(os.path.join(self.abs_path,self.website_name + "-themes.txt"))
+        self.begin_time = time.time()
+        self.time_limit = time_limit
 
 
     def get_minimal_temp(self):
@@ -195,6 +197,10 @@ class Cemantix_Solver:
     def solve(self):
         won = False
         while not won:
+            if self.time_limit and time.time() - self.begin_time > self.time_limit:
+                print("[LOG] Time limit reached")
+                self.driver.quit()
+                sys.exit(0)
             ran_vector = np.zeros(self.model.vector_size)
             ran_vector[random.randint(0, ran_vector.shape[0] - 1)] = random.randrange(-1, 1)
             ran_vector[random.randint(0, ran_vector.shape[0] - 1)] = random.randrange(-1, 1)
@@ -238,8 +244,9 @@ class Cemantix_Solver:
 
 
 if __name__ == '__main__':
-    possible_args = ["--help", "--reddit", "--no-ui", "--vector-file", "--cemantle", "--browser", "--browser-path","--abs-path"]
-    args_with_postfix = [possible_args[3], possible_args[5], possible_args[6],possible_args[7]]
+    possible_args = ["--help", "--reddit", "--no-ui", "--vector-file", "--cemantle", "--browser",
+                     "--browser-path","--abs-path","--time-limit"]
+    args_with_postfix = [possible_args[3], possible_args[5], possible_args[6],possible_args[7],possible_args[8]]
     browser_args = ["firefox", "safari", "chrome", "edge", "chromium"]
     arguments = sys.argv[1:]
     for i, a in enumerate(arguments):
@@ -259,7 +266,8 @@ ARGUMENTS : (All arguments are optional)
 --browser-path : Only use if the path of your browser can't be detected by selenium (aka using chromium)
 --abs-path : Only use if you are not launching the program from the same folder as the python file
 --cemantle : Uses cemantle instead of cemantix (be careful to use an english word2vec file)
---vector-file : Select the name of the pretrained word2vec file you want to use (default is frWac_no_postag_no_phrase_500_skip_cut100.bin)""")
+--vector-file : Select the name of the pretrained word2vec file you want to use (default is frWac_no_postag_no_phrase_500_skip_cut100.bin)
+--time-limit : Select the time limit the program can run in seconds (default has no limit)""")
         sys.exit(0)
     if possible_args[3] in arguments:
         idx = arguments.index(possible_args[3])
@@ -301,13 +309,22 @@ ARGUMENTS : (All arguments are optional)
         abs_path = arguments[idx + 1]
     else:
         abs_path = ""
+    if possible_args[8] in arguments:
+        if (idx := arguments.index(possible_args[8])) == len(arguments):
+            print(
+                "ERROR : You need to specify the time limit if you specify the --time-limit argument"
+            )
+            sys.exit(0)
+        time_limit = int(arguments[idx + 1])
+    else:
+        time_limit = 0
     vector_model = KeyedVectors.load_word2vec_format(filename, binary=True, unicode_errors="ignore")
     reddit_bot = None
     if possible_args[1] in arguments:
         reddit_bot = RedditBot(possible_args[4] in arguments, abs_path)
     solver = Cemantix_Solver(vector_model=vector_model, no_ui=possible_args[2] in arguments, threshold=0.03,
                              cemantle=possible_args[4] in arguments, browser=browser, browser_path=browser_path,
-                             abs_path=abs_path)
+                             abs_path=abs_path, time_limit=time_limit)
     words = solver.solve()
     if possible_args[1] in arguments:
         reddit_bot.send_message_to_reddit(words)
