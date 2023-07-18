@@ -1,6 +1,5 @@
 science
 manger
-pensée
 imagination
 convenir
 maison
@@ -8,7 +7,6 @@ recevoir
 art
 époque
 nature
-croyance
 ville
 politique
 famille
@@ -61,4 +59,12 @@ biologie
 réalisateur
 écoulement
 calorie
+moustiquaire
+sécurité
+ticket
+économie
+mur
+tourment
+théorie
+escalade
 jamais

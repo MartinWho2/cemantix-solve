@@ -5,10 +5,10 @@ It now also includes the code of a reddit bot that gives some hints to the playe
 ## Quick installation
 ### Get the database
 For a french database, go to https://fauconnier.github.io/#data and download a word2vec file of your choice. 
-I personally recommend the frWac with 494 MB (dim=700, cut=50,train=skip,lem,no_pos,no_phrase).
+I personally recommend the frWac with 229 MB (dim=500, cut=100,train=skip,lem,no_pos,no_phrase).
 
 For an english one, go to https://code.google.com/archive/p/word2vec/ and download the file `GoogleNews-vectors-negative300.bin.gz` (I only found one).
-
+However for this one, the script will not really work properly because the database is just too large...
 ### Get the script
 
 Clone the repository and launch the main cemantix solve.py script : 
@@ -28,7 +28,7 @@ ARGUMENTS : (All arguments are optional)
 
 `--cemantle : Uses cemantle instead of cemantix (be careful to use an english word2vec file)`
 
-`--vector-file : Select the name of the pretrained word2vec file you want to use (default is frWac_no_postag_no_phrase_700_skip_cut50.bin)`
+`--vector-file : Select the name of the pretrained word2vec file you want to use (default is frWac_no_postag_no_phrase_500_skip_cut100.bin)`
 
 `--browser : Chooses the browser to use (default is chrome) (possibilities : firefox, chrome, edge, safari, chromium)`
 

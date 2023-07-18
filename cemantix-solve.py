@@ -257,7 +257,7 @@ ARGUMENTS : (All arguments are optional)
 --browser-path : Only use if the path of your browser can't be detected by selenium (aka using chromium)
 --abs-path : Only use if you are not launching the program from the same folder as the python file
 --cemantle : Uses cemantle instead of cemantix (be careful to use an english word2vec file)
---vector-file : Select the name of the pretrained word2vec file you want to use (default is frWac_no_postag_no_phrase_700_skip_cut50.bin)""")
+--vector-file : Select the name of the pretrained word2vec file you want to use (default is frWac_no_postag_no_phrase_500_skip_cut100.bin)""")
         sys.exit(0)
     if possible_args[3] in arguments:
         idx = arguments.index(possible_args[3])
@@ -267,7 +267,7 @@ ARGUMENTS : (All arguments are optional)
             sys.exit(0)
         filename = arguments[idx + 1]
     else:
-        filename = "frWac_no_postag_no_phrase_700_skip_cut50.bin"
+        filename = "frWac_no_postag_no_phrase_500_skip_cut100.bin"
     if possible_args[5] in arguments:
         if (idx := arguments.index(possible_args[5])) == len(arguments):
             print(
