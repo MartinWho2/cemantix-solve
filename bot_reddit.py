@@ -26,7 +26,7 @@ def test_reddit_creds() -> praw.Reddit:
 
 
 class RedditBot:
-    def __init__(self, cemantle:bool):
+    def __init__(self, cemantle:bool, abs_path: str):
         self.reddit = test_reddit_creds()
         self.cemantix_day_0 = date(2022,3,2)
         self.cemantle_day_0 = date(2022,4,4)
@@ -34,6 +34,7 @@ class RedditBot:
         self.language = "french" if not cemantle else "english"
         self.string_name = ["cémantix", "cemantix"] if not cemantle else ["cemantle"]
         self.title = "Cémantix" if not cemantle else "Cemantle"
+        self.abs_path = abs_path
         self.language_messages = self.get_long_texts()
 
 
@@ -59,7 +60,7 @@ class RedditBot:
             submission.reply(message)
 
     def get_long_texts(self):
-        with open("bot_messages.json", "r",encoding="utf-8") as f:
+        with open(self.abs_path+"bot_messages.json", "r",encoding="utf-8") as f:
             dic = json.load(f)[self.language]
         return dic
     def find_correct_thread(self,subreddit) -> praw.Reddit.submission:

@@ -8,12 +8,13 @@ from bot_reddit import RedditBot
 
 class Cemantix_Solver:
     def __init__(self, vector_model: KeyedVectors, no_ui: bool, cemantle: bool, browser: str, threshold: float,
-                 browser_path: str):
+                 browser_path: str, abs_path: str):
         self.model = vector_model
         self.no_ui = no_ui
         self.cemantle = cemantle
         self.browser = browser
         self.browser_path = browser_path
+        self.abs_path = abs_path
         self.threshold = threshold
         self.website_name = "cemantix" if not self.cemantle else "cemantle"
         self.driver = self.setup_driver()
@@ -30,12 +31,8 @@ class Cemantix_Solver:
         self.idx_in_file = 0
         self.tested_words = []
         self.submitted_words = []
-        self.words_file = self.read_file(self.website_name + "-themes.txt")
+        self.words_file = self.read_file(self.abs_path+self.website_name + "-themes.txt")
 
-    def get_temperature_threshold(self):
-        if self.closest_dist < 0:
-            return 0
-        return self.TEMPERATURE_FACTOR_THRESHOLD // pow(self.closest_dist, 0.7)
 
     def get_minimal_temp(self):
         minimal_temp = self.driver.find_element('id', self.website_name + "-summary")
@@ -51,8 +48,6 @@ class Cemantix_Solver:
     def compute_highest_words(self, all_words: list[str]) -> dict[float, (str, int)]:
         print("[LOG] Computing best words...")
         highests_dict = {}
-        threshold = self.get_temperature_threshold()
-        print(f"[LOG] Threshold : {threshold}")
         for entry in all_words:
             word_tested = entry.split(" ")
             if len(word_tested) < 3:
@@ -125,12 +120,12 @@ class Cemantix_Solver:
             if self.closest_dist > 975:
                 new_topn = min((1000 - self.closest_dist) * 2, 10)
             else:
-                new_topn = 20
+                new_topn = 25
             sim_words = [w[0] for w in self.model.most_similar(word, topn=new_topn)]
             if self.is_good_word(score_temperature_word, sim_words):
                 best_shot = word
                 break
-        if best_shot == "" and self.closest_dist > self.ENDGAME_TEMP:
+        if best_shot == "" and self.closest_dist >= self.ENDGAME_TEMP:
             for word, score in new_words:
                 if word in self.tested_words:
                     continue
@@ -241,8 +236,8 @@ class Cemantix_Solver:
 
 
 if __name__ == '__main__':
-    possible_args = ["--help", "--reddit", "--no-ui", "--vector-file", "--cemantle", "--browser", "--browser-path"]
-    args_with_postfix = [possible_args[3], possible_args[5], possible_args[6]]
+    possible_args = ["--help", "--reddit", "--no-ui", "--vector-file", "--cemantle", "--browser", "--browser-path","--abs-path"]
+    args_with_postfix = [possible_args[3], possible_args[5], possible_args[6],possible_args[7]]
     browser_args = ["firefox", "safari", "chrome", "edge", "chromium"]
     arguments = sys.argv[1:]
     for i, a in enumerate(arguments):
@@ -254,12 +249,13 @@ if __name__ == '__main__':
             """HELP : This script lets you automatically find the word of the day from the game cémantix or cemantle: 
             https://cemantix.certitudes.org
             https://cemantle.certitudes.org
-ARGUMENTS :
+ARGUMENTS : (All arguments are optional)
 --help : shows you this page
 --reddit : Sends some hints to the daily reddit page (please do not spam it!)
 --no-ui : Launches the browser without graphical interface
 --browser : Chooses the browser to use (default is chrome) (possibilities : firefox, chrome, edge, safari, chromium)
 --browser-path : Only use if the path of your browser can't be detected by selenium (aka using chromium)
+--abs-path : Only use if you are not launching the program from the same folder as the python file
 --cemantle : Uses cemantle instead of cemantix (be careful to use an english word2vec file)
 --vector-file : Select the name of the pretrained word2vec file you want to use (default is frWac_no_postag_no_phrase_700_skip_cut50.bin)""")
         sys.exit(0)
@@ -294,12 +290,22 @@ ARGUMENTS :
         browser_path = arguments[idx + 1]
     else:
         browser_path = None
+    if possible_args[7] in arguments:
+        if (idx := arguments.index(possible_args[7])) == len(arguments):
+            print(
+                "ERROR : You need to specify the absolute path if you specify the --abs-path argument"
+            )
+            sys.exit(0)
+        abs_path = arguments[idx + 1]
+    else:
+        abs_path = ""
     vector_model = KeyedVectors.load_word2vec_format(filename, binary=True, unicode_errors="ignore")
     reddit_bot = None
     if possible_args[1] in arguments:
-        reddit_bot = RedditBot(possible_args[4] in arguments)
+        reddit_bot = RedditBot(possible_args[4] in arguments, abs_path)
     solver = Cemantix_Solver(vector_model=vector_model, no_ui=possible_args[2] in arguments, threshold=0.03,
-                             cemantle=possible_args[4] in arguments, browser=browser, browser_path=browser_path)
+                             cemantle=possible_args[4] in arguments, browser=browser, browser_path=browser_path,
+                             abs_path=abs_path)
     words = solver.solve()
     if possible_args[1] in arguments:
         reddit_bot.send_message_to_reddit(words)

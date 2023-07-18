@@ -18,7 +18,7 @@ cd cemantix-solve
 python3 -m pip install -r requirements.txt
 python3 cemantix-solve.py
 ```
-ARGUMENTS :
+ARGUMENTS : (All arguments are optional)
 
 `--help : shows you this page`
 
@@ -33,5 +33,7 @@ ARGUMENTS :
 `--browser : Chooses the browser to use (default is chrome) (possibilities : firefox, chrome, edge, safari, chromium)`
 
 `--browser-path : Only use if the path of your browser can't be detected by selenium (aka using chromium)`
+
+`--abs-path : Only use if you are not launching the program from the same folder as the python file`
 
 Credits for the word2vec file : https://fauconnier.github.io/#data, google
