@@ -1,13 +1,14 @@
 import json
 
 import praw
+import os
 import dotenv
 import random
 from datetime import date
 
 
-def test_reddit_creds() -> praw.Reddit:
-    env_vars = dotenv.main.dotenv_values(".env",)
+def test_reddit_creds(abs_path: str) -> praw.Reddit:
+    env_vars = dotenv.main.dotenv_values(os.path.join(abs_path,".env"))
     if env_vars.get("CLIENT_ID") is None or env_vars.get("SECRET") is None or env_vars.get("PASSWORD") is None or env_vars.get(
             "USERNAME") is None:
         print(
@@ -27,7 +28,7 @@ def test_reddit_creds() -> praw.Reddit:
 
 class RedditBot:
     def __init__(self, cemantle:bool, abs_path: str):
-        self.reddit = test_reddit_creds()
+        self.reddit = test_reddit_creds(abs_path)
         self.cemantix_day_0 = date(2022,3,2)
         self.cemantle_day_0 = date(2022,4,4)
         self.cemantle = cemantle
@@ -60,7 +61,7 @@ class RedditBot:
             submission.reply(message)
 
     def get_long_texts(self):
-        with open(self.abs_path+"bot_messages.json", "r",encoding="utf-8") as f:
+        with open(os.path.join(self.abs_path,"bot_messages.json"), "r",encoding="utf-8") as f:
             dic = json.load(f)[self.language]
         return dic
     def find_correct_thread(self,subreddit) -> praw.Reddit.submission:

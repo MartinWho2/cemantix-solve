@@ -1,3 +1,5 @@
+import os.path
+
 from selenium import webdriver
 from gensim.models import KeyedVectors
 import sys
@@ -31,7 +33,7 @@ class Cemantix_Solver:
         self.idx_in_file = 0
         self.tested_words = []
         self.submitted_words = []
-        self.words_file = self.read_file(self.abs_path+self.website_name + "-themes.txt")
+        self.words_file = self.read_file(os.path.join(self.abs_path,self.website_name + "-themes.txt"))
 
 
     def get_minimal_temp(self):
